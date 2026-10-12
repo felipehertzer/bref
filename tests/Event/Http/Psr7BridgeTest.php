@@ -49,6 +49,27 @@ class Psr7BridgeTest extends CommonHttpTest
         self::assertSame('', $serverParams['PHP_AUTH_PW']);
     }
 
+    /**
+     * @dataProvider provide API Gateway versions
+     */
+    public function test POST request with multipart file uploads in indexed arrays(int $version)
+    {
+        $this->fromFixture(__DIR__ . "/Fixture/ag-v$version-body-form-multipart-files-indexed-arrays.json");
+
+        $this->assertParsedBody([
+            'documents' => [
+                ['title' => 'Report'],
+            ],
+        ]);
+        $documents = $this->request->getUploadedFiles()['documents'];
+        self::assertSame([0], array_keys($documents));
+        self::assertSame(['file', 'preview'], array_keys($documents[0]));
+        self::assertSame('report.txt', $documents[0]['file']->getClientFilename());
+        self::assertSame("Report text\n", $documents[0]['file']->getStream()->getContents());
+        self::assertSame('notes.txt', $documents[0]['preview']->getClientFilename());
+        self::assertSame("Notes text\n", $documents[0]['preview']->getStream()->getContents());
+    }
+
     protected function fromFixture(string $file): void
     {
         $event = new HttpRequestEvent(json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR));
